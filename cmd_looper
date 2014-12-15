@@ -1,0 +1,88 @@
+#!/bin/bash
+
+
+trap "exit 0" SIGINT SIGTERM
+
+if [ $# -eq 0 ];
+then
+  echo -e "Usage: cmd_looper [cmd]\n  Loops a command, refreshing after key press.\n\nArguments:\n Filters:\n\t--head=N\t\tFetch only N lines from the top\n\t--tail=N\t\tFetch only N lines from the bottom.\n\t--grep=\"expr\"\t\tPass output through grep.\n\n Other:\n\t--refresh=N\t\tRefresh automatically after N seconds.\n\nFilters are executed in order of apperance.\n\nExample: cmd_looper last --head=10 --grep=root";
+  exit 1;
+fi
+
+CMD=
+FILTERS=
+REFRESH_TIMEOUT=
+
+for arg in $@
+do
+  THIS_FILTER=
+  if [ ! -z "`echo $arg | grep '^--head='`" ];
+  then
+    THIS_FILTER="head -n `echo $arg | sed 's/--head=//'`"
+  elif [ ! -z "`echo $arg | grep '^--tail='`" ];
+  then
+    THIS_FILTER="tail -n `echo $arg | sed 's/--tail=//'`"
+  elif [ ! -z "`echo $arg | grep '^--grep='`" ];
+  then
+    THIS_FILTER="grep \"`echo $arg | sed 's/--grep=//'`\""
+  elif [ ! -z "`echo $arg | grep '^--refresh='`" ];
+  then
+    REFRESH_TIMEOUT="`echo $arg | sed 's/--refresh=//'`"
+    continue;
+  fi
+
+  if [ ! -z "${THIS_FILTER}" ];
+  then
+    FILTERS="${FILTERS} | ${THIS_FILTER}"
+  else
+    if [ -z ${CMD} ];
+    then
+      CMD="$arg"
+    else
+      CMD="${CMD} $arg"
+    fi
+  fi
+done
+
+
+if [ -z ${CMD} ];
+then
+  echo "NO COMMAND SPECIFIED!";
+  exit 1;
+fi
+
+if [ ! -z "${FILTERS}" ];
+then
+  CMD="${CMD} ${FILTERS}"
+fi
+
+which clear >/dev/null 2>&1;
+if [ $? -eq 0 ];
+then
+	CLEAR_CMD='clear'
+else
+	CLEAR_CMD='printf "\033c"' # cygwin support, other systems without "clear"
+fi
+
+while [ 1 ];
+do
+  ${CLEAR_CMD}
+  eval ${CMD};
+  echo -n "UPDATED: `date`. Press any key to reload, or 'q' to quit....  ";
+  if [ -z "${REFRESH_TIMEOUT}" ];
+  then
+    read -n 1 x;
+  else
+    echo -n " (Automatic refresh after ${REFRESH_TIMEOUT} seconds)";
+    read -n 1 -t ${REFRESH_TIMEOUT} x;
+  fi
+  if [ "$x" = "q" ];
+  then
+    echo -e "\nQuitting...";
+    exit 0;
+  fi
+  echo;
+  echo "Refreshing...";
+  sleep .2;
+done
+
