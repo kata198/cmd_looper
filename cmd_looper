@@ -67,7 +67,7 @@ fi
 while [ 1 ];
 do
   ${CLEAR_CMD}
-  eval ${CMD};
+  ${CMD};
   echo -n "UPDATED: `date`. Press any key to reload, or 'q' to quit....  ";
   if [ -z "${REFRESH_TIMEOUT}" ];
   then
@@ -76,6 +76,7 @@ do
     echo -n " (Automatic refresh after ${REFRESH_TIMEOUT} seconds)";
     read -n 1 -t ${REFRESH_TIMEOUT} x;
   fi
+  read -d '' -t .05 -n 9999999 -s nowhere;
   if [ "$x" = "q" ];
   then
     echo -e "\nQuitting...";
