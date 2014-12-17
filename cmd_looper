@@ -75,7 +75,7 @@ do
   then
     OUTPUT="`${CMD}`"
 	${CLEAR_CMD}
-	echo ${OUTPUT}
+	echo -e "${OUTPUT}"
   else
     ${CLEAR_CMD}
     ${CMD};
