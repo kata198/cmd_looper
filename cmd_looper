@@ -5,13 +5,14 @@ trap "exit 0" SIGINT SIGTERM
 
 if [ $# -eq 0 ];
 then
-  echo -e "Usage: cmd_looper [cmd]\n  Loops a command, refreshing after key press.\n\nArguments:\n Filters:\n\t--head=N\t\tFetch only N lines from the top\n\t--tail=N\t\tFetch only N lines from the bottom.\n\t--grep=\"expr\"\t\tPass output through grep.\n\n Other:\n\t--refresh=N\t\tRefresh automatically after N seconds.\n\nFilters are executed in order of apperance.\n\nExample: cmd_looper last --head=10 --grep=root";
+  echo -e "Usage: cmd_looper [cmd]\n  Loops a command, refreshing after key press.\n\nArguments:\n Filters:\n\t--head=N\t\tFetch only N lines from the top\n\t--tail=N\t\tFetch only N lines from the bottom.\n\t--grep=\"expr\"\t\tPass output through grep.\n\n Other:\n\t--refresh=N\t\tRefresh automatically after N seconds.\n\t--buffer\t\tCollect all output before displaying. Default behaviour is to provide output as it comes.\n\nFilters are executed in order of apperance.\n\nExample: cmd_looper last --head=10 --grep=root" 2>&1;
   exit 1;
 fi
 
 CMD=
 FILTERS=
 REFRESH_TIMEOUT=
+DO_BUFFER=0
 
 for arg in $@
 do
@@ -29,13 +30,17 @@ do
   then
     REFRESH_TIMEOUT="`echo $arg | sed 's/--refresh=//'`"
     continue;
+  elif [ "$arg" = "--buffer" ];
+  then
+    DO_BUFFER=1
+    continue;
   fi
 
   if [ ! -z "${THIS_FILTER}" ];
   then
     FILTERS="${FILTERS} | ${THIS_FILTER}"
   else
-    if [ -z ${CMD} ];
+    if [ -z "${CMD}" ];
     then
       CMD="$arg"
     else
@@ -45,9 +50,9 @@ do
 done
 
 
-if [ -z ${CMD} ];
+if [ -z "${CMD}" ];
 then
-  echo "NO COMMAND SPECIFIED!";
+  echo "NO COMMAND SPECIFIED!" >&2;
   exit 1;
 fi
 
@@ -66,8 +71,15 @@ fi
 
 while [ 1 ];
 do
-  ${CLEAR_CMD}
-  ${CMD};
+  if [ "$DO_BUFFER" = "1" ];
+  then
+    OUTPUT="`${CMD}`"
+	${CLEAR_CMD}
+	echo ${OUTPUT}
+  else
+    ${CLEAR_CMD}
+    ${CMD};
+  fi
   echo -n "UPDATED: `date`. Press any key to reload, or 'q' to quit....  ";
   if [ -z "${REFRESH_TIMEOUT}" ];
   then

@@ -14,7 +14,7 @@ Utility for looping output of shell commands, with ability to specify filters, l
 
 	 Other:
 	        --refresh=N             Refresh automatically after N seconds.
-
+	        --buffer                Collect all output before displaying. Default behaviour is to provide output as it comes.
 	Filters are executed in order of apperance.
 
 	Example: cmd_looper last --head=10 --grep=root
