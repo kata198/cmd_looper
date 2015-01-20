@@ -95,9 +95,7 @@ do
     then
       for secRemaining in `seq $REFRESH_TIMEOUT -1 1`;
       do
-              echo -en "\r";
-              echo -n "$LAST_UPDATED_MSG"
-              echo -n " (Automatic refresh in $secRemaining seconds)";
+              echo -en "\r$LAST_UPDATED_MSG (Automatic refresh in $secRemaining seconds)"
               read -n 1 -t .99 x; # Sleep a little less than a second, as the above steps take some time.
               if [ $? -eq 0 ];
               then
@@ -105,8 +103,7 @@ do
               fi
       done
     else
-      echo -n "$LAST_UPDATED_MSG"
-	  echo -n " (Automatic refresh in $REFRESH_TIMEOUT seconds)";
+      echo -n "$LAST_UPDATED_MSG (Automatic refresh in $REFRESH_TIMEOUT seconds)"
       read -n 1 -t $REFRESH_TIMEOUT x
     fi
   fi
