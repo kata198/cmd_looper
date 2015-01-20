@@ -5,7 +5,7 @@ trap "exit 0" SIGINT SIGTERM
 
 if [ $# -eq 0 ];
 then
-  echo -e "Usage: cmd_looper [cmd]\n  Loops a command, refreshing after key press.\n\nArguments:\n Filters:\n\t--head=N\t\tFetch only N lines from the top\n\t--tail=N\t\tFetch only N lines from the bottom.\n\t--grep=\"expr\"\t\tPass output through grep.\n\n Other:\n\t--refresh=N\t\tRefresh automatically after N seconds.\n\t--buffer\t\tCollect all output before displaying. Default behaviour is to provide output as it comes.\n\nFilters are executed in order of apperance.\n\nExample: cmd_looper last --head=10 --grep=root" 2>&1;
+  echo -e "Usage: cmd_looper [cmd]\n  Loops a command, refreshing after key press.\n\nArguments:\n Filters:\n\t--head=N\t\tFetch only N lines from the top\n\t--tail=N\t\tFetch only N lines from the bottom.\n\t--grep=\"expr\"\t\tPass output through grep.\n\n Other:\n\t--refresh=N\t\tRefresh automatically after N seconds.\n\t--buffer\t\tCollect all output before displaying. Default behaviour is to provide output as it comes.\n\t--countdown\t\tCount Down seconds remaining when --refresh is also specified. Default is static display.\n\nFilters are executed in order of apperance.\n\nExample: cmd_looper last --head=10 --grep=root" 2>&1;
   exit 1;
 fi
 
@@ -13,6 +13,7 @@ CMD=
 FILTERS=
 REFRESH_TIMEOUT=
 DO_BUFFER=0
+DO_COUNTDOWN=0
 
 for arg in $@
 do
@@ -30,6 +31,10 @@ do
   then
     REFRESH_TIMEOUT="`echo $arg | sed 's/--refresh=//'`"
     continue;
+  elif [ ! -z "`echo $arg | grep '^--countdown'`" ];
+  then
+    DO_COUNTDOWN=1
+    continue
   elif [ "$arg" = "--buffer" ];
   then
     DO_BUFFER=1
@@ -64,9 +69,9 @@ fi
 which clear >/dev/null 2>&1;
 if [ $? -eq 0 ];
 then
-	CLEAR_CMD='clear'
+    CLEAR_CMD='clear'
 else
-	CLEAR_CMD='printf "\033c"' # cygwin support, other systems without "clear"
+    CLEAR_CMD='printf "\033c"' # cygwin support, other systems without "clear"
 fi
 
 while [ 1 ];
@@ -74,19 +79,36 @@ do
   if [ "$DO_BUFFER" = "1" ];
   then
     OUTPUT="`${CMD}`"
-	${CLEAR_CMD}
-	echo -e "${OUTPUT}"
+    eval ${CLEAR_CMD}
+    echo -e "${OUTPUT}"
   else
-    ${CLEAR_CMD}
+    eval ${CLEAR_CMD}
     ${CMD};
   fi
-  echo -n "UPDATED: `date`. Press any key to reload, or 'q' to quit....  ";
+  LAST_UPDATED_MSG="UPDATED: `date`. Press any key to reload, or 'q' to quit....  "
   if [ -z "${REFRESH_TIMEOUT}" ];
   then
+    echo -n "$LAST_UPDATED_MSG"
     read -n 1 x;
   else
-    echo -n " (Automatic refresh after ${REFRESH_TIMEOUT} seconds)";
-    read -n 1 -t ${REFRESH_TIMEOUT} x;
+    if [ $DO_COUNTDOWN -eq 1 ];
+    then
+      for secRemaining in `seq $REFRESH_TIMEOUT -1 1`;
+      do
+              echo -en "\r";
+              echo -n "$LAST_UPDATED_MSG"
+              echo -n " (Automatic refresh in $secRemaining seconds)";
+              read -n 1 -t .99 x; # Sleep a little less than a second, as the above steps take some time.
+              if [ $? -eq 0 ];
+              then
+                  break;
+              fi
+      done
+    else
+      echo -n "$LAST_UPDATED_MSG"
+	  echo -n " (Automatic refresh in $REFRESH_TIMEOUT seconds)";
+      read -n 1 -t $REFRESH_TIMEOUT x
+    fi
   fi
   read -d '' -t .05 -n 9999999 -s nowhere;
   if [ "$x" = "q" ];
